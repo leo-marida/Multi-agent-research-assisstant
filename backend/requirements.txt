@@ -6,6 +6,7 @@ langchain-community>=0.2.14
 langchain-postgres>=0.0.6
 openai>=1.30.0
 langchain-tavily>=0.1.0
+tavily-python>=0.3.3
 pgvector>=0.2.5
 asyncpg>=0.29.0
 psycopg[binary]>=3.1.0
