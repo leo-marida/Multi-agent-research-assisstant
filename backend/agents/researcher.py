@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from models.schemas import Subtask
 from rag.ingestion import ingest_content
+from utils.cache import store as cache_store
 from utils.streaming import sse_event
 
 load_dotenv()
@@ -47,6 +48,19 @@ async def research_subtask(subtask: Subtask, session_id: str) -> AsyncGenerator[
         "summary": f"Found {len(results)} results",
     })
 
+    # Store search results in memory for analyst (fast, no DB round-trip)
+    cache_items = [
+        {
+            "url": r.get("url", ""),
+            "title": r.get("title", r.get("url", "")),
+            "content": (r.get("raw_content") or r.get("content", ""))[:3000],
+        }
+        for r in results
+        if (r.get("raw_content") or r.get("content", "")).strip()
+    ]
+    cache_store(session_id, subtask.id, cache_items)
+
+    # Also ingest into pgvector (best-effort, for RAG demo)
     total_chunks = 0
     for r in results:
         content = r.get("raw_content") or r.get("content", "")
@@ -63,7 +77,6 @@ async def research_subtask(subtask: Subtask, session_id: str) -> AsyncGenerator[
         })
 
         try:
-            content = content.replace("\x00", "")
             chunks = await ingest_content(
                 content=content[:8000],
                 session_id=session_id,

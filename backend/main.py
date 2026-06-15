@@ -167,11 +167,14 @@ async def research(request: ResearchRequest):
 
 @app.get("/api/health")
 async def health():
+    from rag.vectorstore import _ASYNC_URL
+    masked = (_ASYNC_URL[:30] + "...") if _ASYNC_URL and len(_ASYNC_URL) > 30 else _ASYNC_URL
     return {
         "status": "ok",
         "openai_key_set": bool(os.getenv("OPENAI_API_KEY")),
         "tavily_key_set": bool(os.getenv("TAVILY_API_KEY")),
         "db_url_set": bool(os.getenv("DATABASE_URL")),
+        "async_url_prefix": masked,
     }
 
 
