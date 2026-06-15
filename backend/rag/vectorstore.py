@@ -29,7 +29,13 @@ _embeddings = None
 def _get_engine():
     global _engine
     if _engine is None:
-        _engine = create_async_engine(_ASYNC_URL, pool_pre_ping=True, pool_size=5, max_overflow=5)
+        _engine = create_async_engine(
+            _ASYNC_URL,
+            connect_args={"ssl": "require"},
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=5,
+        )
     return _engine
 
 
