@@ -9,11 +9,15 @@ async def analyse_subtask(subtask: Subtask, session_id: str) -> AsyncGenerator[s
     yield sse_event("agent_start", {"agent": "analyst", "subtask_id": subtask.id, "title": subtask.title})
     yield sse_event("tool_call", {"subtask_id": subtask.id, "tool": "retrieve_context", "input": subtask.query})
 
-    chunks = await retrieve_context.ainvoke({
-        "query": subtask.query,
-        "session_id": session_id,
-        "k": 6,
-    })
+    try:
+        chunks = await retrieve_context.ainvoke({
+            "query": subtask.query,
+            "session_id": session_id,
+            "k": 6,
+        })
+    except Exception as e:
+        yield sse_event("error", {"subtask_id": subtask.id, "message": f"Retrieval failed: {e}"})
+        chunks = []
 
     yield sse_event("tool_result", {
         "subtask_id": subtask.id,
@@ -21,7 +25,6 @@ async def analyse_subtask(subtask: Subtask, session_id: str) -> AsyncGenerator[s
         "summary": f"Retrieved {len(chunks)} chunks",
     })
 
-    # Format raw chunks directly — synthesizer handles LLM work
     finding = "\n\n".join(
         f"[Source: {c['source_url']}]\n{c['content']}" for c in chunks
     ) if chunks else ""
