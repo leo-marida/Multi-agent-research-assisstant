@@ -133,8 +133,30 @@ async def run_research_pipeline(topic: str):
 
 @app.post("/api/research")
 async def research(request: ResearchRequest):
+    async def stream_with_keepalive():
+        queue: asyncio.Queue = asyncio.Queue()
+        _SENTINEL = object()
+
+        async def producer():
+            try:
+                async for event in run_research_pipeline(request.topic):
+                    await queue.put(event)
+            finally:
+                await queue.put(_SENTINEL)
+
+        asyncio.create_task(producer())
+
+        while True:
+            try:
+                item = await asyncio.wait_for(queue.get(), timeout=10.0)
+                if item is _SENTINEL:
+                    break
+                yield item
+            except asyncio.TimeoutError:
+                yield ": keepalive\n\n"
+
     return StreamingResponse(
-        run_research_pipeline(request.topic),
+        stream_with_keepalive(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

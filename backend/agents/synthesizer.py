@@ -12,10 +12,10 @@ _llm = None
 def _get_llm():
     global _llm
     if _llm is None:
-        _llm = ChatOpenAI(model="gpt-4.1", temperature=0.3)
+        _llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0.3)
     return _llm
 
-_SYSTEM = """You are a research synthesis expert. Given a set of detailed research findings, produce a comprehensive, authoritative markdown report.
+_SYSTEM = """You are a research synthesis expert. Given raw source excerpts retrieved from the web, produce a comprehensive, authoritative markdown report.
 
 Format rules (CRITICAL — follow exactly):
 - Single blank lines between paragraphs, never double
@@ -29,7 +29,7 @@ Structure:
 3-4 sentences covering the most important findings and current state of the topic.
 
 ## [Section per subtask — use the subtask title as heading]
-3-5 detailed paragraphs per section. Include ALL specific facts, figures, dates, names, and technical details from the findings. Use inline citations. Write with depth — this is for an informed reader who wants complete coverage.
+3-5 paragraphs per section. Extract and synthesise ALL specific facts, figures, dates, names, and technical details from the source excerpts. Include inline citations. Write with depth — this is for an informed reader who wants complete coverage.
 
 ## Key Takeaways
 - 5-7 specific, concrete bullet points (not vague generalities)
@@ -55,12 +55,12 @@ async def synthesize_report(topic: str, findings: list[dict]) -> AsyncGenerator[
         findings_text += f"\n\n### {f['title']}\n{f['finding']}\n"
         all_sources.extend(f.get("sources", []))
 
-    sources_text = "\n".join(f"- {s}" for s in dict.fromkeys(all_sources))
+    sources_text = "\n".join(dict.fromkeys(all_sources))
 
     prompt = (
         f"Topic: {topic}\n\n"
-        f"Research findings:\n{findings_text}\n\n"
-        f"Available sources:\n{sources_text}"
+        f"Source excerpts by subtask:\n{findings_text}\n\n"
+        f"All source URLs:\n{sources_text}"
     )
 
     async for chunk in _get_llm().astream([
