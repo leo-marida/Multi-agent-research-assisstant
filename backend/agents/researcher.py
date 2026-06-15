@@ -12,7 +12,13 @@ from utils.streaming import sse_event
 
 load_dotenv()
 
-_llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0).bind_tools([search_web, scrape_url])
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0).bind_tools([search_web, scrape_url])
+    return _llm
 
 _SYSTEM = """You are a thorough web research agent. Given a research query:
 1. Call search_web once to retrieve results.
@@ -32,7 +38,7 @@ async def research_subtask(subtask: Subtask, session_id: str) -> AsyncGenerator[
     searched = False
 
     for _ in range(6):
-        response = await _llm.ainvoke(messages)
+        response = await _get_llm().ainvoke(messages)
         messages.append(response)
 
         if not response.tool_calls:

@@ -8,7 +8,13 @@ from utils.streaming import sse_event
 
 load_dotenv()
 
-_llm = ChatOpenAI(model="gpt-4.1", temperature=0).with_structured_output(ResearchPlan)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatOpenAI(model="gpt-4.1", temperature=0).with_structured_output(ResearchPlan)
+    return _llm
 
 _SYSTEM = """You are a senior research strategist. Given a research topic, design exactly 3 comprehensive subtasks that together cover the full breadth of the subject.
 
@@ -23,7 +29,7 @@ Return only valid JSON matching the schema."""
 async def plan_research(topic: str) -> AsyncGenerator[str, None]:
     yield sse_event("agent_start", {"agent": "planner", "input": topic})
 
-    plan: ResearchPlan = await _llm.ainvoke([
+    plan: ResearchPlan = await _get_llm().ainvoke([
         {"role": "system", "content": _SYSTEM},
         {"role": "user", "content": f"Research topic: {topic}"},
     ])
@@ -35,7 +41,7 @@ async def plan_research(topic: str) -> AsyncGenerator[str, None]:
 
 
 async def get_plan(topic: str) -> ResearchPlan:
-    return await _llm.ainvoke([
+    return await _get_llm().ainvoke([
         {"role": "system", "content": _SYSTEM},
         {"role": "user", "content": f"Research topic: {topic}"},
     ])

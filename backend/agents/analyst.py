@@ -9,7 +9,13 @@ from utils.streaming import sse_event
 
 load_dotenv()
 
-_llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+    return _llm
 
 _SYSTEM = """You are a senior research analyst. Given retrieved document chunks, write a thorough, detailed finding of 400-600 words.
 
@@ -55,7 +61,7 @@ async def analyse_subtask(subtask: Subtask, session_id: str) -> AsyncGenerator[s
         f"[Source: {c['source_url']}]\n{c['content']}" for c in chunks
     )
 
-    response = await _llm.ainvoke([
+    response = await _get_llm().ainvoke([
         {"role": "system", "content": _SYSTEM},
         {"role": "user", "content": f"Research query: {subtask.query}\n\nRetrieved context:\n{context}"},
     ])

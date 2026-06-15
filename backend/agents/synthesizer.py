@@ -7,7 +7,13 @@ from utils.streaming import sse_event
 
 load_dotenv()
 
-_llm = ChatOpenAI(model="gpt-4.1", temperature=0.3)
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        _llm = ChatOpenAI(model="gpt-4.1", temperature=0.3)
+    return _llm
 
 _SYSTEM = """You are a research synthesis expert. Given a set of detailed research findings, produce a comprehensive, authoritative markdown report.
 
@@ -57,7 +63,7 @@ async def synthesize_report(topic: str, findings: list[dict]) -> AsyncGenerator[
         f"Available sources:\n{sources_text}"
     )
 
-    async for chunk in _llm.astream([
+    async for chunk in _get_llm().astream([
         {"role": "system", "content": _SYSTEM},
         {"role": "user", "content": prompt},
     ]):
